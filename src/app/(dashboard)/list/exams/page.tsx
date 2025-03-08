@@ -87,4 +87,4 @@ import Image from "next/image";
     );
     };
 
-export default ExamListPage;
+    export default ExamListPage;

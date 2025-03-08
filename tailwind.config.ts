@@ -25,6 +25,12 @@ const config: Config = {
         hermantoRed: "#FF0000",
         hermantoRedLight: "#FFCDD2",
         hermantoBlue: "#1976D2",
+        lamaSky: "#C3EBFA",
+        lamaSkyLight: "#EDF9FD",
+        lamaPurple: "#CFCEFF",
+        lamaPurpleLight: "#F1F0FF",
+        lamaYellow: "#FAE27C",
+        lamaYellowLight: "#FEFCE8",
       }
     },
   },
