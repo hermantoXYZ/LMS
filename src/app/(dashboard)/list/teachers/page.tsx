@@ -5,9 +5,10 @@ import Table from "@/components/Table"
 import Link from "next/link"
 import { role, teachersData } from "@/lib/data"
 import FormModal from "@/components/FormModal"
-import { Class, Subject, Teacher } from "@prisma/client"
+import { Class, Prisma, Subject, Teacher } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { ITEM_PER_PAGE } from "@/lib/settings"
+import { object } from "zod"
 
 type TeacherList =  Teacher & {subjects:Subject[]} & {classes:Class[]};
 
@@ -95,37 +96,43 @@ const TeacherListPage = async ({
     // const p = page || 1 ; atau bisa juga
     const p = page ? parseInt(page) : 1;
 
-//  untuk menampilkan 6 data
-    const [data, count] = await prisma.$transaction([
-        prisma.teacher.findMany({
-            where: {
-                ...(queryParams.classId ? {
-                    lessons: {
-                        some: {
-                            classId: parseInt(queryParams.classId)
-                        }
-                    }
-                } : {})
-            },
+    const query: Prisma.TeacherWhereInput = {};
+
+    if (queryParams) {
+        for (const [key, value] of Object.entries(queryParams)) {
+          if (value !== undefined) {
+            switch (key) {
+              case "classId":
+                query.lessons = {
+                  some: {
+                    classId: parseInt(value),
+                  },
+                };
+                break;
+              case "search":
+                query.name = { contains: value, mode: "insensitive" };
+                break;
+              default:
+                break;
+            }
+          }
+        }
+      }
+
+        //  untuk menampilkan 6 data
+        const [data, count] = await prisma.$transaction([
+            prisma.teacher.findMany({
+            where: query,
             include: {
                 subjects: true,
-                classes: true
+                classes: true,
             },
             take: ITEM_PER_PAGE,
-            skip: ITEM_PER_PAGE * (p - 1)  // Fixed skip calculation
-        }),
-        prisma.teacher.count({
-            where: {
-                ...(queryParams.classId ? {
-                    lessons: {
-                        some: {
-                            classId: parseInt(queryParams.classId)
-                        }
-                    }
-                } : {})
-            }
-        })
-    ]);
+            skip: ITEM_PER_PAGE * (p - 1),
+            }),
+            prisma.teacher.count({ where: query }),
+        ]);
+
 
     return (
         <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
