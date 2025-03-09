@@ -5,18 +5,11 @@ import Table from "@/components/Table"
 import Link from "next/link"
 import { role, teachersData } from "@/lib/data"
 import FormModal from "@/components/FormModal"
+import { Class, Subject, Teacher } from "@prisma/client"
+import prisma from "@/lib/prisma"
+import { ITEM_PER_PAGE } from "@/lib/settings"
 
-type Teacher = {
-    id: number;
-    teacherId: string;
-    name: string;
-    email?:string;
-    photo:string;
-    phone: string;
-    subjects: string[];
-    classes: string[];
-    address: string;
-}
+type TeacherList =  Teacher & {subjects:Subject[]} & {classes:Class[]};
 
     const columns = [
         {
@@ -54,22 +47,20 @@ type Teacher = {
         },
     ];
 
-
-const TeacherListPage = () => {
-
-    const renderRow = (item:Teacher) => (
+    
+const renderRow = (item:TeacherList) => (
         
         <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-hermantoSkyLight">
             <td className="flex items-center gap-4 p-4">
-                <Image src={item.photo} alt="" width={40} height={40} className="md:hidden xl:block w-10 h-10 rounded-full object-cover" />
+                <Image src={item.img || "/noAvatar.png"} alt="" width={40} height={40} className="md:hidden xl:block w-10 h-10 rounded-full object-cover" />
                 <div className="flex flex-col">
                     <h3 className="font-semibold" >{item.name}</h3>
                     <p className="text-xs text-gray-500">{item?.email}</p>
                 </div>
             </td>
-            <td className="hidden md:table-cell">{item.teacherId}</td>
-            <td className="hidden md:table-cell">{item.subjects.join(",")}</td>
-            <td className="hidden md:table-cell">{item.classes.join(",")}</td>
+            <td className="hidden md:table-cell">{item.username}</td>
+            <td className="hidden md:table-cell">{item.subjects.map((subject) => subject.name).join(",")}</td>
+            <td className="hidden md:table-cell">{item.classes.map((classItem) => classItem.name).join(",")}</td>
             <td className="hidden md:table-cell">{item.phone}</td>
             <td className="hidden md:table-cell">{item.address}</td>
             <td>
@@ -91,8 +82,50 @@ const TeacherListPage = () => {
             </td>
         </tr>
 
-    );
+);
 
+
+const TeacherListPage = async ({
+    searchParams,
+}:{
+    searchParams:{[key:string]:string  | undefined}}) => {
+
+    const {page, ...queryParams} = searchParams
+
+    // const p = page || 1 ; atau bisa juga
+    const p = page ? parseInt(page) : 1;
+
+//  untuk menampilkan 6 data
+    const [data, count] = await prisma.$transaction([
+        prisma.teacher.findMany({
+            where: {
+                ...(queryParams.classId ? {
+                    lessons: {
+                        some: {
+                            classId: parseInt(queryParams.classId)
+                        }
+                    }
+                } : {})
+            },
+            include: {
+                subjects: true,
+                classes: true
+            },
+            take: ITEM_PER_PAGE,
+            skip: ITEM_PER_PAGE * (p - 1)  // Fixed skip calculation
+        }),
+        prisma.teacher.count({
+            where: {
+                ...(queryParams.classId ? {
+                    lessons: {
+                        some: {
+                            classId: parseInt(queryParams.classId)
+                        }
+                    }
+                } : {})
+            }
+        })
+    ]);
 
     return (
         <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
@@ -122,11 +155,11 @@ const TeacherListPage = () => {
 
             {/* LIST SECTION */}
         <div className="">
-        <Table columns={columns} renderRow={renderRow} data={teachersData} />
+        <Table columns={columns} renderRow={renderRow} data={data} />
         </div>
             {/* PAGE SECTION */}
         <div className="">
-            <Pagination />
+            <Pagination page={p} count={count} />
         </div>
         </div>
     )
