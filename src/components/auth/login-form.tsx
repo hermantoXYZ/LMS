@@ -34,7 +34,33 @@ export function LoginForm() {
         return;
       }
 
-      router.push("/dashboard");
+      const userResponse = await fetch("/api/auth/me");
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        const role = userData.role;
+
+        // Redirect based on user role
+        switch (role) {
+          case "admin":
+            router.push("/admin");
+            break;
+          case "teacher":
+            router.push("/teacher");
+            break;
+          case "student":
+            router.push("/student");
+            break;
+          case "parent":
+            router.push("/parent");
+            break;
+          default:
+            router.push("/dashboard"); // Fallback route
+        }
+      } else {
+        // If we can't get the role, redirect to a default page
+        router.push("/dashboard");
+      }
+      
       router.refresh();
     } catch (error) {
       setError("Something went wrong. Please try again.");
@@ -42,10 +68,10 @@ export function LoginForm() {
     }
   };
 
-  const handleOAuthSignIn = (provider: string) => {
-    setIsLoading(true);
-    signIn(provider, { callbackUrl: "/dashboard" });
-  };
+  // const handleOAuthSignIn = (provider: string) => {
+  //   setIsLoading(true);
+  //   signIn(provider, { callbackUrl: "/dashboard" });
+  // };
 
   return (
     <Card className="w-full max-w-md mx-auto">
